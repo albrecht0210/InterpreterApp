@@ -373,7 +373,7 @@ namespace InterpreterApp.Analysis.Syntax
                 expression = ParseParenthesisExpression();
                 return expression;
             }
-            else if (MatchToken(TokenType.PlusToken) || MatchToken(TokenType.MinusToken))
+            else if (MatchToken(TokenType.PlusToken) || MatchToken(TokenType.MinusToken) || MatchToken(TokenType.NotToken))
             {
                 expression = ParseUnaryExpression();
                 return expression;

@@ -245,9 +245,6 @@ namespace InterpreterApp.Analysis
                         case TokenType.OrToken:
                             bin_result = left || right;
                             return bin_result;
-                        //case TokenType.NotToken:
-                        //    bin_result = left != right;
-                        //    return result.ToString().ToUpper();
                         default:
                             throw new Exception($"({binary_expr.Line},{binary_expr.Column}): Unknown token.");
                     }
@@ -255,6 +252,12 @@ namespace InterpreterApp.Analysis
                     dynamic unary_value = EvaulateExpression(unary_expr.Expression);
                     if (unary_expr.Token_Operator.Token_Type == TokenType.MinusToken)
                         return -unary_value;
+                    if (unary_expr.Token_Operator.Token_Type == TokenType.NotToken)
+                    {
+                        if (unary_value is not bool)
+                            throw new Exception($"({unary_expr.Line},{unary_expr.Column}): The NOT operator cannot be applied to operand {Grammar.GetDataType(unary_value)}");
+                        return !unary_value;
+                    }
                     return unary_value;
                 case ParenthesisNode parenthesis_expr:
                     dynamic paren_expr = EvaulateExpression(parenthesis_expr.Expression);
