@@ -16,19 +16,26 @@ namespace InterpreterApp.Analysis.Syntax
         private readonly Lexer _lexer;
         private Token _current_token;
         private int _cond_tabs;
-        private bool _can_declare;
 
         public Parser(Lexer lexer)
         {
             this._lexer = lexer;
             this._current_token = lexer.GetToken();
             this._cond_tabs = 0;
-            this._can_declare = true;
         }
 
         // Parse the whole code
         public ProgramNode ParseProgram()
         {
+            while (MatchToken(TokenType.CommentToken))
+            {
+                ConsumeToken(TokenType.CommentToken);
+                ConsumeToken(TokenType.NewLineToken);
+            }
+
+            while (MatchToken(TokenType.NewLineToken))
+                ConsumeToken(TokenType.NewLineToken);
+
             ConsumeToken(TokenType.BeginToken);
             ConsumeToken(TokenType.CodeToken);
             ConsumeToken(TokenType.NewLineToken);
@@ -104,57 +111,52 @@ namespace InterpreterApp.Analysis.Syntax
 
             while (!MatchToken(TokenType.EndToken))
             {
-                for (int i = 0; i < _cond_tabs; i++)
-                    ConsumeToken(TokenType.TabToken);
+                while (MatchToken(TokenType.NewLineToken))
+                    ConsumeToken(TokenType.NewLineToken);
 
-                if (MatchToken(TokenType.TabToken))
+                int i = 0;
+                do
+                {
                     ConsumeToken(TokenType.TabToken);
+                    i++;
+                } while (i < _cond_tabs);
 
                 if (MatchToken(TokenType.IntToken) || MatchToken(TokenType.FloatToken) ||
                     MatchToken(TokenType.CharToken) || MatchToken(TokenType.BoolToken))
                 {
                     //Debug.WriteLine("IS PARSE VARIABLE DECLARATION");
-                    if (_can_declare)
-                        statement_list.Add(ParseVariableDeclarationStatement());
-                    else
-                        throw new Exception($"({_current_token.Line},{_current_token.Column}): Invalid statement.");
+                    statement_list.Add(ParseVariableDeclarationStatement());
                 }
                 else if (MatchToken(TokenType.IdentifierToken))
                 {
                     //Debug.WriteLine("IS PARSE ASSIGNMENT");
-                    _can_declare = false;
                     statement_list.Add(ParseAssignmentStatement());
                 }
                 else if (MatchToken(TokenType.DisplayToken))
                 {
                     //Debug.WriteLine("IS PARSE DISPLAY");
-                    _can_declare = false;
                     statement_list.Add(ParseDisplayStatement());
                 }
                 else if (MatchToken(TokenType.CommentToken))
                 {
                     //Debug.WriteLine("IS PARSE COMMENT");
-                    _can_declare = false;
                     ConsumeToken(TokenType.CommentToken);
                     ConsumeToken(TokenType.NewLineToken);
                 }
                 else if (MatchToken(TokenType.ScanToken))
                 {
                     //Debug.WriteLine("IS PARSE SCAN");
-                    _can_declare = false;
                     statement_list.Add(ParseScanStatement());
 
                 }
                 else if (MatchToken(TokenType.IfToken))
                 {
                     //Debug.WriteLine("IS PARSE IF");
-                    _can_declare = false;
                     statement_list.Add(ParseIfStatement());
                 }
                 else if (MatchToken(TokenType.WhileToken))
                 {
                     //Debug.WriteLine("IS PARSE IF");
-                    _can_declare = false;
                     statement_list.Add(ParseWhileStatement());
                 }
                 else if (MatchToken(TokenType.EndToken))
