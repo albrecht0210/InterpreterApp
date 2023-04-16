@@ -29,7 +29,9 @@ namespace InterpreterApp
             ShowWindow(GetConsoleWindow(), SW_HIDE);
         }
 
-        private void runToolStripMenuItem1_Click(object sender, EventArgs e)
+  
+
+        private void runToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string code = code_input.Text;
 
