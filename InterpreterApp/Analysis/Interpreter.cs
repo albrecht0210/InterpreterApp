@@ -31,9 +31,11 @@ namespace InterpreterApp.Analysis
             variable_table = new VariableTable();
         }
 
-        public void Execute()
-        { 
-            foreach (StatementNode statement in program.Statements)
+        public void Execute(ProgramNode statement_block = null)
+        {
+            ProgramNode prog = statement_block == null ? program : statement_block;
+
+            foreach (StatementNode statement in prog.Statements)
             {
                 switch (statement)
                 {
@@ -59,7 +61,7 @@ namespace InterpreterApp.Analysis
             }
         }
 
-        private void ExecuteStatementBlock(ProgramNode statement_block)
+        /*private void ExecuteStatementBlock(ProgramNode statement_block)
         {
             foreach (StatementNode statement in statement_block.Statements)
             {
@@ -82,198 +84,244 @@ namespace InterpreterApp.Analysis
                         break;
                 }
             }
-        }
+        }*/
 
         // Start Execute Statements
-
         private void ExecuteVariableDeclaration(VariableDeclarationNode statement)
         {
+            // Loop through the dictionary of variables
             foreach (var variable in statement.Variables)
             {
+                // Get the variable name
                 string identifier = variable.Key;
-                if (variable_table.Exist(identifier))
-                    throw new Exception($"({statement.Line},{statement.Column}): Variable '{identifier}' already exists.");
+                
+                // Set default value to null
                 object value = null;
 
+                // If the variable value is not null ex. INT a = 5
                 if (variable.Value != null)
-                    value = EvaulateExpression(variable.Value);
+                    value = EvaluateExpression(variable.Value);
 
-                variable_table.AddVariable(identifier, Grammar.GetDataType(statement.Data_Type_Token), value);
+                // Add variable to table of variables
+                variable_table.AddVariable(identifier, Grammar.GetDataType(statement.Data_Type_Token.Token_Type), value);
             }
         }
 
         private void ExecuteAssignment(AssignmentNode statement)
         {
-            List<string> identifiers = statement.Identifiers;
-            object value;
+            // Set default value to null
+            object value = null;
 
-            foreach (string identifier in identifiers)
+            // Loop through a list of identifiers
+            foreach (string identifier in statement.Identifiers)
             {
-                if (variable_table.Exist(identifier))
-                {
-                    value = EvaulateExpression(statement.Expression);
-                }
-                else
-                    throw new Exception($"({statement.Line},{statement.Column}): Variable '{identifier}' does not exists.");
+                // Get the value of the expression
+                value = EvaluateExpression(statement.Expression);
 
+                // Add variable to table of variables
                 variable_table.AddValue(identifier, value);
             }
         }
 
         private void ExecuteDisplay(DisplayNode statement)
         {
+            // Set display result to an empty string
             string result = "";
-            foreach (var expression in statement.Expression)
-            {
-                if (expression.Value)
-                    result += "\n";
 
-                result += EvaulateExpression(expression.Key);
-            }
+            // Loop through the list of expression
+            foreach (var expression in statement.Expressions)
+                result += EvaluateExpression(expression);
 
-            //result += "\n";
+            // Display result
             Console.Write(result);
         }
 
         private void ExecuteScan(ScanNode statement)
         {
+            // List of values
             List<string> values = new List<string>();
+            // List of identifiers
             List<string> identifiers = statement.Identifiers;
+            // Set input to an empty string
             string inputted = "";
 
+            // Read inputs
             Console.Write("");
             inputted = Console.ReadLine();
+
+            // Split the input using ',' as delimiter
             values = inputted.Replace(" ", "").Split(',').ToList();
+            
+            // Runtime error: if the length of values and identifiers
             if (values.Count != identifiers.Count)
-                throw new Exception($"({statement.Line}, {statement.Column}): Missing input/s.");
+                throw new Exception($"Runtime Error: Missing input/s.");
 
-            object value;
+            // Set default value to null
+            object value = null;
 
-            for (int i = 0; i < values.Count; i++)
+            int index = 0;
+            foreach (var val in values)
             {
-                if (variable_table.Exist(identifiers[i]))
-                {
-                    value = Grammar.GetProperValue(values[i]);
-                    if (variable_table.GetType(identifiers[i]) != Grammar.GetDataType(value))
-                        throw new Exception($"({statement.Line},{statement.Column}): Unable to assign {Grammar.GetDataType(value)} on \"{identifiers[i]}\".");
-                }
-                else
-                    throw new Exception($"({statement.Line},{statement.Column}): Variable '{identifiers[i]}' does not exists.");
+                // Convert the string to specific data type
+                value = Grammar.ConvertValue(val);
 
-                variable_table.AddValue(identifiers[i], value);
+                // If the data type of the identifier and expression is not same
+                if (variable_table.GetType(identifiers[index]) != Grammar.GetDataType(value))
+                    throw new Exception($"Runtime Error: Unable to assign {Grammar.GetDataType(value)} on \"{identifiers[index]}\".");
+
+                // Add variable to table of variables
+                variable_table.AddValue(identifiers[index], value);
+
+                index++;
             }
         }
 
         private void ExecuteCondition(ConditionalNode statement)
         {
-            int disp_index = -1;
-            for (int i = 0; i < statement.Expressions.Count; i++)
-            {
-                if (statement.Expressions[i] == null)
-                {
-                    disp_index = i;
-                    break;
-                }
+            // Set displayed to false as default
+            bool displayed = false;
+            // Set index to 0 as default
+            int index = 0;
 
-                if ((bool)EvaulateExpression(statement.Expressions[i]))
+            // Loop through the list of expressions
+            foreach (var expression in statement.Expressions)
+            {
+                // If expression is not null -> if, else if
+                if (expression != null)
                 {
-                    disp_index = i;
-                    break;
+                    // Evaluate the expression and cast to bool
+                    // If true then set display to true and
+                    // Execute the statement block corresponding to
+                    // the statement/expression
+                    if ((bool)EvaluateExpression(expression))
+                    {
+                        displayed = true;
+                        Execute(statement.Statements[index]);
+                        break;
+                    }
                 }
+                // If expression is null break out of the loop
+                else
+                    break;
+
+                index++;
             }
 
-            if (disp_index != -1)
-                ExecuteStatementBlock(statement.Statements[disp_index]);
+            // Check if expression is null -> null is else
+            if (statement.Expressions[index] == null)
+                // If displayed is false then execute the statement block for
+                // else statement
+                if (!displayed)
+                    Execute(statement.Statements[index]);
         }
 
         private void ExecuteLoop(LoopNode statement)
         {
-            while ((bool)EvaulateExpression(statement.Expression))
-                ExecuteStatementBlock(statement.Statement);
+            // Evaluate the expression and cast to bool
+            // If true then do a while loop
+            while ((bool)EvaluateExpression(statement.Expression))
+                Execute(statement.Statement);
         }
-
         // End Execute Statements
 
         // Get the value of the expression
-        private object EvaulateExpression(ExpressionNode expression)
+        private object EvaluateExpression(ExpressionNode expression)
         {
             switch(expression)
             {
                 case BinaryNode binary_expr:
-                    dynamic left = EvaulateExpression(binary_expr.Left);
-                    dynamic right = EvaulateExpression(binary_expr.Right);
-                    dynamic bin_result;
+                    return EvaluateBinaryExpression(binary_expr);
 
-                    switch (binary_expr.Token_Operator.Token_Type)
-                    {
-                        case TokenType.PlusToken:
-                            bin_result = left + right;
-                            return bin_result;
-                        case TokenType.MinusToken:
-                            bin_result = left - right;
-                            return bin_result;
-                        case TokenType.StarToken:
-                            bin_result = left * right;
-                            return bin_result;
-                        case TokenType.SlashToken:
-                            bin_result = left / right;
-                            return bin_result;
-                        case TokenType.PercentToken:
-                            bin_result = left % right;
-                            return bin_result;
-                        case TokenType.LessThanToken:
-                            bin_result = left < right;
-                            return bin_result;
-                        case TokenType.GreaterThanToken:
-                            bin_result = left > right;
-                            return bin_result;
-                        case TokenType.LessEqualToken:
-                            bin_result = left <= right;
-                            return bin_result;
-                        case TokenType.GreaterEqualToken:
-                            bin_result = left >= right  ;
-                            return bin_result;
-                        case TokenType.EqualToToken:
-                            bin_result = left == right;
-                            return bin_result;
-                        case TokenType.NotEqualToken:
-                            bin_result = left != right;
-                            return bin_result;
-                        case TokenType.AndToken:
-                            bin_result = left && right;
-                            return bin_result;
-                        case TokenType.OrToken:
-                            bin_result = left || right;
-                            return bin_result;
-                        default:
-                            throw new Exception($"({binary_expr.Line},{binary_expr.Column}): Unknown token.");
-                    }
                 case UnaryNode unary_expr:
-                    dynamic unary_value = EvaulateExpression(unary_expr.Expression);
-                    if (unary_expr.Token_Operator.Token_Type == TokenType.MinusToken)
-                        return -unary_value;
-                    if (unary_expr.Token_Operator.Token_Type == TokenType.NotToken)
-                    {
-                        if (unary_value is not bool)
-                            throw new Exception($"({unary_expr.Line},{unary_expr.Column}): The NOT operator cannot be applied to operand {Grammar.GetDataType(unary_value)}");
-                        return !unary_value;
-                    }
-                    return unary_value;
+                    return EvaluateUnaryExpression(unary_expr);
+
                 case ParenthesisNode parenthesis_expr:
-                    dynamic paren_expr = EvaulateExpression(parenthesis_expr.Expression);
-                    return paren_expr;
+                    return EvaluateExpression(parenthesis_expr.Expression);
+
                 case IdentifierNode identifier_expr:
-                    if (variable_table.GetValue(identifier_expr.Name) == null)
-                        throw new Exception($"({identifier_expr.Line},{identifier_expr.Column}): {identifier_expr.Name} is null.");
-                    object result = variable_table.GetValue(identifier_expr.Name);
-                    if (result.GetType() == typeof(bool))
-                        return (bool)result ? "TRUE" : "FALSE";
-                    return result;
+                    return EvaluateIdentifierExpression(identifier_expr);
+
                 case LiteralNode literal_expr:
                     return literal_expr.Literal;
+
                 default:
                     throw new Exception("Unknown expression.");
             }
+        }
+
+        private object EvaluateBinaryExpression(BinaryNode expression)
+        {
+            dynamic left = EvaluateExpression(expression.Left);
+            dynamic right = EvaluateExpression(expression.Right);
+            dynamic bin_result;
+
+            switch (expression.Token_Operator.Token_Type)
+            {
+                case TokenType.PLUS:
+                    bin_result = left + right;
+                    return bin_result;
+                case TokenType.MINUS:
+                    bin_result = left - right;
+                    return bin_result;
+                case TokenType.STAR:
+                    bin_result = left * right;
+                    return bin_result;
+                case TokenType.SLASH:
+                    bin_result = left / right;
+                    return bin_result;
+                case TokenType.PERCENT:
+                    bin_result = left % right;
+                    return bin_result;
+                case TokenType.LESSTHAN:
+                    bin_result = left < right;
+                    return bin_result;
+                case TokenType.GREATERTHAN:
+                    bin_result = left > right;
+                    return bin_result;
+                case TokenType.LESSEQUAL:
+                    bin_result = left <= right;
+                    return bin_result;
+                case TokenType.GREATEREQUAL:
+                    bin_result = left >= right;
+                    return bin_result;
+                case TokenType.EQUALTO:
+                    bin_result = left == right;
+                    return bin_result;
+                case TokenType.NOTEQUAL:
+                    bin_result = left != right;
+                    return bin_result;
+                case TokenType.AND:
+                    bin_result = left && right;
+                    return bin_result;
+                case TokenType.OR:
+                    bin_result = left || right;
+                    return bin_result;
+                default:
+                    throw new Exception($"Unknown operator.");
+            }
+        }
+    
+        private object EvaluateUnaryExpression(UnaryNode expression)
+        {
+            dynamic unary_value = EvaluateExpression(expression.Expression);
+            if (expression.Token_Operator.Token_Type == TokenType.MINUS)
+                return -unary_value;
+            else if (expression.Token_Operator.Token_Type == TokenType.NOT)
+                return !unary_value;
+            else
+                return unary_value;
+        }
+    
+        private object EvaluateIdentifierExpression(IdentifierNode expression)
+        {
+            if (variable_table.GetValue(expression.Name) == null)
+                throw new Exception($"({expression.Identifier_Token.Line},{expression.Identifier_Token.Column}): Variable '{expression.Name}' is null.");
+
+            object result = variable_table.GetValue(expression.Name);
+
+            if (result.GetType() == typeof(bool))
+                return (bool)result ? "TRUE" : "FALSE";
+            return result;
         }
     }
 }

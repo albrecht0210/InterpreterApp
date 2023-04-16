@@ -1,26 +1,19 @@
-﻿using InterpreterApp.Analysis.Tree.Expression;
-using InterpreterApp.Analysis.Type;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using InterpreterApp.Analysis.Syntax;
+using InterpreterApp.Analysis.Tree.Expression;
 
 namespace InterpreterApp.Analysis.Tree.Statement
 {
     public class AssignmentNode : StatementNode
     {
-        public AssignmentNode(List<string> identifiers, ExpressionNode expression, int line, int column)
+        public AssignmentNode(List<string> identifiers, List<Token> equals_token, ExpressionNode expression)
         {
             Identifiers = identifiers;
+            Equals_Token = equals_token;
             Expression = expression;
-            Line = line;
-            Column = column;
         }
 
         public List<string> Identifiers { get; }
+        public List<Token> Equals_Token { get; }
         public ExpressionNode Expression { get; }
-        public int Line { get; }
-        public int Column { get; }
     }
 }

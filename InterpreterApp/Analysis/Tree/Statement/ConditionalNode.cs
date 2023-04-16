@@ -1,4 +1,5 @@
-﻿using InterpreterApp.Analysis.Tree.Expression;
+﻿using InterpreterApp.Analysis.Syntax;
+using InterpreterApp.Analysis.Tree.Expression;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,17 +10,15 @@ namespace InterpreterApp.Analysis.Tree.Statement
 {
     public class ConditionalNode : StatementNode
     {
-        public ConditionalNode(List<ExpressionNode> expressions, List<ProgramNode> statements, List<int> lines, List<int> columns)
+        public ConditionalNode(List<Token> tokens, List<ExpressionNode> expressions, List<ProgramNode> statements)
         {
+            Tokens = tokens;
             Expressions = expressions;
             Statements = statements;
-            Lines = lines;
-            Columns = columns;
         }
 
+        public List<Token> Tokens { get; }
         public List<ExpressionNode> Expressions { get; }
         public List<ProgramNode> Statements { get; }
-        public List<int> Lines { get; }
-        public List<int> Columns { get; }
     }
 }

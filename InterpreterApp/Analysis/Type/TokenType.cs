@@ -9,25 +9,27 @@ namespace InterpreterApp.Analysis.Type
     public enum TokenType
     {
         // Keyword
-        BeginToken, EndToken, CodeToken, IntToken, FloatToken, CharToken, BoolToken,
-        IfToken, ElseToken, WhileToken, DisplayToken, ScanToken, AndToken, OrToken, NotToken,
+        BEGIN, END, CODE, IF, ELSE, WHILE, DISPLAY, SCAN, AND, OR, NOT,
+
+        // Data Type
+        INT, FLOAT, CHAR, BOOL,
 
         // Identifier
-        IdentifierToken,
+        IDENTIFIER,
 
         // Literal
-        IntLiteralToken, FloatLiteralToken, CharLiteralToken, BoolLiteralToken, StringLiteralToken,
+        INTLITERAL, FLOATLITERAL, CHARLITERAL, BOOLLITERAL, STRINGLITERAL,
 
         // Symbol
-        CommaToken, EqualsToken, ColonToken, QuoteToken, ApostropheToken, PoundToken,
-        DollarToken, AmpersandToken, OpenBracketToken, CloseBracketToken,
+        COMMA, EQUAL, COLON, QUOTE, APOSTROPHE, POUND, DOLLAR, AMPERSAND,
 
-        // Operators
-        OpenParenthesisToken, CloseParenthesisToken, StarToken, SlashToken, PercentToken,
-        PlusToken, MinusToken, GreaterThanToken, LessThanToken, GreaterEqualToken,
-        LessEqualToken, EqualToToken, NotEqualToken,
+        // Arithmetic Operators
+        OPENPARENTHESIS, CLOSEPARENTHESIS, STAR, SLASH, PERCENT, PLUS, MINUS,
+
+        // Comparison Operators
+        GREATERTHAN, LESSTHAN, GREATEREQUAL, LESSEQUAL, EQUALTO, NOTEQUAL,
 
         // Other
-        WhiteSpaceToken, NewLineToken, TabToken, CommentToken, EscapeToken, ErrorToken, EndOfFileToken
+        NEWLINE, ESCAPE, ERROR, ENDOFFILE
     }
 }

@@ -1,27 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using InterpreterApp.Analysis.Type;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace InterpreterApp.Analysis.Syntax
 {
     public class Lexer
     {
-        private readonly string code;
-        private int position;
-        private int line, column;
-        private int parenthesis_count;
+        private readonly string _code;
+        private int _position;
+        private int _line, _column;
 
         public Lexer(string code)
         {
-            this.code = code;
-            this.position = 0;
-            this.line = 1;
-            this.column = 1;
-            this.parenthesis_count = 0;
+            this._code = code;
+            this._position = 0;
+            this._line = 1;
+            this._column = 1;
         }
 
         private char Current => Peek(0);
@@ -29,238 +29,284 @@ namespace InterpreterApp.Analysis.Syntax
 
         private char Peek(int offset)
         {
-            int index = position + offset;
-            if (index >= code.Length)
+            int index = _position + offset;
+            if (index >= _code.Length)
                 return '\0';
-            return code[index];
+            return _code[index];
         }
         
         private void Next(int offset = 1)
         {
-            position += offset;
-            column += offset;
+            _position += offset;
+            _column += offset;
+        }
+        
+        private void NewLine()
+        {
+            _line++;
+            _column = 1;
+            Next();
         }
 
         public Token GetToken()
         {
-            while (position < code.Length)
+            while (_position < _code.Length)
             {
                 if (char.IsLetter(Current))
-                    return GetKeywordOrIdentifierToken();
+                    return GetKeywordOrDataTypeOrIdentifierToken();
+
+                if (char.IsDigit(Current))
+                    return GetNumberLiteralToken();
 
                 switch (Current)
                 {
+                    // WhiteSpace
                     case ' ':
+                    case '\t':
                         Next();
                         continue;
                     case '\n':
-                        Token new_line = new Token(TokenType.NewLineToken, "\n", null, line, column);
-                        line++;
-                        column = 1;
-                        Next();
+                        Token new_line = new Token(TokenType.NEWLINE, "\n", null, _line, _column);
+                        NewLine();
                         return new_line;
-                    case '\t':
-                        Next();
-                        return new Token(TokenType.TabToken, "\t", null, line, column);
+                    // Identifier
+                    case '_':
+                        return GetKeywordOrDataTypeOrIdentifierToken();
+                    // Literals
                     case '\'':
                         return GetCharacterLiteralToken();
                     case '\"':
                         return GetBooleanOrStringLiteralToken();
                     case '.':
-                    case '0':
-                    case '1':
-                    case '2':
-                    case '3':
-                    case '4':
-                    case '5':
-                    case '6':
-                    case '7':
-                    case '8':
-                    case '9':
                         return GetNumberLiteralToken();
-                    case '_':
-                        return GetKeywordOrIdentifierToken();
+                    // Comment
                     case '#':
-                        return GetCommentToken();
-                    case '$':
-                        Next();
-                        return new Token(TokenType.DollarToken, "$", null, line, column);
-                    case '&':
-                        Next();
-                        return new Token(TokenType.AmpersandToken, "&", null, line, column);
-                    case '[':
-                        return GetEscapeCodeToken();
-                    case '(':
-                        Next();
-                        parenthesis_count++;
-                        return new Token(TokenType.OpenParenthesisToken, "(", null, line, column);
-                    case ')':
-                        Next();
-                        parenthesis_count--;
-                        return new Token(TokenType.CloseParenthesisToken, ")", null, line, column);
+                        while (Current != '\n' && Current != '\0')
+                            Next();
+                        continue;
+                    // Arithmetic Operators
                     case '*':
                         Next();
-                        return new Token(TokenType.StarToken, "*", null, line, column);
+                        return new Token(TokenType.STAR, "*", null, _line, _column - 1);
                     case '/':
                         Next();
-                        return new Token(TokenType.SlashToken, "/", null, line, column);
+                        return new Token(TokenType.SLASH, "/", null, _line, _column - 1);
                     case '%':
                         Next();
-                        return new Token(TokenType.PercentToken, "%", null, line, column);
+                        return new Token(TokenType.PERCENT, "%", null, _line, _column - 1);
                     case '+':
                         Next();
-                        return new Token(TokenType.PlusToken, "+", null, line, column);
+                        return new Token(TokenType.PLUS, "+", null, _line, _column - 1);
                     case '-':
                         Next();
-                        return new Token(TokenType.MinusToken, "-", null, line, column);
+                        return new Token(TokenType.MINUS, "-", null, _line, _column - 1);
+                    // Logical Operators
                     case '>':
                         if (LookAhead == '=')
                         {
                             Next(2);
-                            return new Token(TokenType.GreaterEqualToken, ">=", null, line, column);
+                            return new Token(TokenType.GREATEREQUAL, ">=", null, _line, _column - 2);
                         }
                         Next();
-                        return new Token(TokenType.GreaterThanToken, ">", null, line, column);
+                        return new Token(TokenType.GREATERTHAN, ">", null, _line, _column - 1);
                     case '<':
                         if (LookAhead == '=')
                         {
                             Next(2);
-                            return new Token(TokenType.LessEqualToken, "<=", null, line, column);
+                            return new Token(TokenType.LESSEQUAL, "<=", null, _line, _column - 2);
                         }
                         else if (LookAhead == '>')
                         {
                             Next(2);
-                            return new Token(TokenType.NotEqualToken, "<>", null, line, column);
+                            return new Token(TokenType.NOTEQUAL, "<>", null, _line, _column - 2);
                         }
                         Next();
-                        return new Token(TokenType.LessThanToken, "<", null, line, column);
+                        return new Token(TokenType.LESSTHAN, "<", null, _line, _column - 1);
                     case '=':
                         if (LookAhead == '=')
                         {
                             Next(2);
-                            return new Token(TokenType.EqualToToken, "==", null, line, column);
+                            return new Token(TokenType.EQUALTO, "==", null, _line, _column - 2);
                         }
                         Next();
-                        return new Token(TokenType.EqualsToken, "=", null, line, column);
+                        return new Token(TokenType.EQUAL, "=", null, _line, _column - 1);
+                    // Symbols
+                    case '$':
+                        Next();
+                        return new Token(TokenType.DOLLAR, "$", null, _line, _column - 1);
+                    case '&':
+                        Next();
+                        return new Token(TokenType.AMPERSAND, "&", null, _line, _column - 1);
+                    case '[':
+                        return GetEscapeCodeToken();
+                    case '(':
+                        Next();
+                        return new Token(TokenType.OPENPARENTHESIS, "(", null, _line, _column - 1);
+                    case ')':
+                        Next();
+                        return new Token(TokenType.CLOSEPARENTHESIS, ")", null, _line, _column - 1);
                     case ',':
                         Next();
-                        return new Token(TokenType.CommaToken, ",", null, line, column);
+                        return new Token(TokenType.COMMA, ",", null, _line, _column - 1);
                     case ':':
                         Next();
-                        return new Token(TokenType.ColonToken, ":", null, line, column);
+                        return new Token(TokenType.COLON, ":", null, _line, _column - 1);
                     default:
                         Next();
-                        return new Token(TokenType.ErrorToken, Current.ToString(), null, line, column);
+                        return new Token(TokenType.ERROR, Current.ToString(), "Unknown symbol", _line, _column - 1);
                 }
             }
-            return new Token(TokenType.EndOfFileToken, "\0", null, line, column);
+            return new Token(TokenType.ENDOFFILE, "\0", null, _line, _column);
         }
 
-        private Token GetKeywordOrIdentifierToken()
+        private Token GetKeywordOrDataTypeOrIdentifierToken()
         {
-            int start = position;
+            int start = _position;
+            int line_col = _column;
+
             while (char.IsLetter(Current) || Current == '_' || char.IsDigit(Current))
                 Next();
 
-            int length = position - start;
-            string text = code.Substring(start, length);
-            TokenType token_type = Grammar.GetKeywordTokenType(text);
-            return new Token(token_type, text, null, line, column);
+            int length = _position - start;
+            string text = _code.Substring(start, length);
+
+            return Grammar.GetWordToken(text, _line, line_col);
         }
 
         private Token GetCharacterLiteralToken()
         {
-            // Note: the char value only accepts letters
-            int start = position;
+            int start = _position;
+            int line_col = _column;
+
             Next();
-            if (LookAhead == '\'')
+            while (Current != '\'')
+                Next();
+
+            if (Current == '\'')
             {
-                char value = Current;
-                Next(2);
-                int lenght = position - start;
-                string text = code.Substring(start, lenght);
-                return new Token(TokenType.CharLiteralToken, text, value, line, column);
+                Next();
+                int length = _position - start;
+                string text = _code.Substring(start, length);
+                object value = null;
+
+                if (text.Length == 3)
+                {
+                    value = text.ToCharArray()[1];
+                    return new Token(TokenType.CHARLITERAL, text, value, _line, line_col);
+                }
+                else if (text.Length == 5)
+                {
+                    string escape_text = text.Substring(1, text.Length - 1);
+                    if (escape_text == "[[]" || escape_text == "[]]" || escape_text == "[&]" || escape_text == "[$]" || escape_text == "[#]" || escape_text == "[']")
+                    {
+                        value = escape_text.ToCharArray()[1];
+                        return new Token(TokenType.CHARLITERAL, text, value, _line, line_col);
+                    }
+                    return new Token(TokenType.ERROR, text, "Invalid CHAR literal.", _line, line_col);
+                }
+                return new Token(TokenType.ERROR, text, "Invalid CHAR literal.", _line, line_col);
             }
-            return new Token(TokenType.ErrorToken, Current.ToString(), null, line, column);
+            return new Token(TokenType.ERROR, _code.Substring(start, (_position - start)), "Invalid CHAR literal.", _line, line_col);
         }
 
         private Token GetBooleanOrStringLiteralToken()
         {
-            int start = position;
+            int start = _position;
+            int line_col = _column;
+
             Next();
-            while (Current != '\"')
+            while (Current != '\"' && Current != '\n')
                 Next();
 
             if (Current == '\"')
             {
                 Next();
-                int length = position - start;
-                string text = code.Substring(start, length);
+                int length = _position - start;
+                string text = _code.Substring(start, length);
 
                 if (text == "\"TRUE\"")
-                    return new Token(TokenType.BoolLiteralToken, text, true, line, column);
+                    return new Token(TokenType.BOOLLITERAL, text, true, _line, line_col);
                 else if (text == "\"FALSE\"")
-                    return new Token(TokenType.BoolLiteralToken, text, false, line, column);
+                    return new Token(TokenType.BOOLLITERAL, text, false, _line, line_col);
                 else
-                    return new Token(TokenType.StringLiteralToken, text, code.Substring(start + 1, length - 2), line, column);
+                    return new Token(TokenType.STRINGLITERAL, text, _code.Substring(start + 1, length - 2), _line, line_col);
             }
-            return new Token(TokenType.ErrorToken, Current.ToString(), null, line, column);
+
+            int err_length = _position - start;
+            string err_text = _code.Substring(start, err_length);
+
+            if (err_text == "\"TRUE" || err_text == "\"FALSE")
+                return new Token(TokenType.ERROR, err_text, "Invalid BOOL literal.", _line, line_col);
+            return new Token(TokenType.ERROR, err_text, "Invalid STRING literal.", _line, line_col);
         }
 
         private Token GetNumberLiteralToken()
         {
-            bool is_float = false;
-            int start = position;
+            bool is_float = Current == '.' ? true : false;
+
+            int start = _position;
+            int line_col = _column;
 
             while (char.IsDigit(Current) || Current == '.')
             {
-                if (Current == '.' && is_float)
-                {
-                    return new Token(TokenType.ErrorToken, Current.ToString(), null, line, column);
-                }
-                else if (Current == '.' && !is_float)
-                    is_float = true;
                 Next();
+                if (Current == '.')
+                    if (is_float)
+                        return new Token(TokenType.ERROR, _code.Substring(start, (_position - start)), "Invalid FLOAT literal.", _line, line_col);
+                    else
+                        is_float = true;
             }
+            
+            int length = _position - start;
+            string text = _code.Substring(start, length);
 
-            int length = position - start;
-            string text = code.Substring(start, length);
             if (is_float)
             {
                 if (!float.TryParse(text, out var float_value))
-                    return new Token(TokenType.ErrorToken, text, null, line, column);
-                return new Token(TokenType.FloatLiteralToken, text, float_value, line, column);
+                    return new Token(TokenType.ERROR, text, "Invalid FLOAT literal.", _line, line_col);
+                return new Token(TokenType.FLOATLITERAL, text, float_value, _line, line_col);
             }
-            if (!int.TryParse(text, out var int_value))
-                return new Token(TokenType.ErrorToken, text, null, line, column);
-            return new Token(TokenType.IntLiteralToken, text, int_value, line, column);
-        }
-
-        private Token GetCommentToken()
-        {
-            int start = position;
-            Next();
-            while (Current != '\n' && Current != '\0')
-                Next();
-
-            int length = position - start;
-            string text = code.Substring(start, length);
-            return new Token(TokenType.CommentToken, text, null, line, column);
+            else
+            {
+                if (!int.TryParse(text, out var int_value))
+                    return new Token(TokenType.ERROR, text, "Invalid INT literal.", _line, line_col);
+                return new Token(TokenType.INTLITERAL, text, int_value, _line, line_col);
+            }
+            
         }
 
         private Token GetEscapeCodeToken()
         {
-            int start = position;
-            Next();
-            if (LookAhead == ']')
+            int start = _position;
+            int line_col = _column;
+            
+            while (Current != ']')
+                Next();
+
+            if (Current == ']')
             {
-                char value = Current;
-                Next(2);
-                int lenght = position - start;
-                string text = code.Substring(start, lenght);
-                return new Token(TokenType.EscapeToken, text, value, line, column);
+                Next();
+
+                int length = _position - start;
+                string text = _code.Substring(start, length);
+                object value = null;
+
+                if (Current == ']')
+                {
+                    Next();
+                    length = _position - start;
+                    text = _code.Substring(start, length);
+                    value = null;
+                }
+
+                if (text == "[[]" || text == "[]]" || text == "[&]" || text == "[$]" || text == "[#]")
+                {
+                    value = text.ToCharArray()[1];
+                    return new Token(TokenType.ESCAPE, text, value, _line, line_col);
+                }
+                return new Token(TokenType.ERROR, text, $"Invalid '{text}' as escape sequence.", _line, line_col);
             }
-            return new Token(TokenType.ErrorToken, Current.ToString(), null, line, column);
+            return new Token(TokenType.ERROR, _code.Substring(start, (_position - start)), "Missing ]", _line, line_col);
         }
     }
 }

@@ -44,7 +44,7 @@ namespace InterpreterApp
                 }
                 catch (Exception exception)
                 {
-                    //Debug.WriteLine(exception.StackTrace);
+                    Debug.WriteLine(exception.StackTrace);
                     Console.WriteLine(exception.Message);
                 }
                 Console.WriteLine("\nPress any key to continue...");

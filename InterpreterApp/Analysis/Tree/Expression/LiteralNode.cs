@@ -3,21 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using InterpreterApp.Analysis.Syntax;
 using InterpreterApp.Analysis.Type;
 
 namespace InterpreterApp.Analysis.Tree.Expression
 {
     public class LiteralNode : ExpressionNode
     {
-        public LiteralNode(object literal, int line, int column)
+        public LiteralNode(Token literal_token, object literal)
         {
+            Literal_Token = literal_token;
             Literal = literal;
-            Line = line;
-            Column = column;
         }
 
+        public Token Literal_Token { get; }
         public object Literal { get; }
-        public int Line { get; }
-        public int Column { get; }
     }
 }

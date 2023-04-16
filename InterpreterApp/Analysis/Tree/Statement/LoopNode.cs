@@ -1,4 +1,5 @@
-﻿using InterpreterApp.Analysis.Tree.Expression;
+﻿using InterpreterApp.Analysis.Syntax;
+using InterpreterApp.Analysis.Tree.Expression;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,17 +10,15 @@ namespace InterpreterApp.Analysis.Tree.Statement
 {
     public class LoopNode : StatementNode
     {
-        public LoopNode(ExpressionNode expression, ProgramNode statement, int line, int column)
+        public LoopNode(Token while_token, ExpressionNode expression, ProgramNode statement)
         {
+            While_Token = while_token;
             Expression = expression;
             Statement = statement;
-            Line = line;
-            Column = column;
         }
 
+        public Token While_Token { get; }
         public ExpressionNode Expression { get; }
         public ProgramNode Statement { get; }
-        public int Line { get; }
-        public int Column { get; }
     }
 }

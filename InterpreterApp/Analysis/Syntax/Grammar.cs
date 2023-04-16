@@ -1,52 +1,67 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text.RegularExpressions;
 using InterpreterApp.Analysis.Type;
 
 namespace InterpreterApp.Analysis.Syntax
 {
     public static class Grammar
     {
-        public static TokenType GetKeywordTokenType(string input)
+        public static Token GetWordToken(string input, int line, int column)
         {
-            switch (input)
+            Dictionary<string, TokenType> keywords = new Dictionary<string, TokenType>()
             {
-                case "BEGIN":
-                    return TokenType.BeginToken;
-                case "END":
-                    return TokenType.EndToken;
-                case "CODE":
-                    return TokenType.CodeToken;
-                case "INT":
-                    return TokenType.IntToken;
-                case "FLOAT":
-                    return TokenType.FloatToken;
-                case "CHAR":
-                    return TokenType.CharToken;
-                case "BOOL":
-                    return TokenType.BoolToken;
-                case "IF":
-                    return TokenType.IfToken;
-                case "ELSE":
-                    return TokenType.ElseToken;
-                case "WHILE":
-                    return TokenType.WhileToken;
-                case "DISPLAY":
-                    return TokenType.DisplayToken;
-                case "SCAN":
-                    return TokenType.ScanToken;
-                case "AND":
-                    return TokenType.AndToken;
-                case "OR":
-                    return TokenType.OrToken;
-                case "NOT":
-                    return TokenType.NotToken;
+                {"BEGIN", TokenType.BEGIN}, {"END", TokenType.END}, {"CODE", TokenType.CODE}, {"IF", TokenType.IF}, 
+                {"ELSE", TokenType.ELSE}, {"WHILE", TokenType.WHILE}, {"DISPLAY", TokenType.DISPLAY}, {"SCAN", TokenType.SCAN},
+                {"AND", TokenType.AND}, {"OR", TokenType.OR}, {"NOT", TokenType.NOT}
+            };
+
+            Dictionary<string, TokenType> data_types = new Dictionary<string, TokenType>()
+            {
+                {"INT", TokenType.INT}, {"FLOAT", TokenType.FLOAT}, {"CHAR", TokenType.CHAR}, {"BOOL", TokenType.BOOL}
+            };
+
+            if (keywords.ContainsKey(input.ToUpper()))
+            {
+                if (keywords.ContainsKey(input))
+                    return new Token(keywords[input], input, null, line, column);
+                else
+                    return new Token(TokenType.ERROR, input, $"Invalid keyword '{input}' should be {input.ToUpper()}", line, column);
+            }
+            else if (data_types.ContainsKey(input.ToUpper()))
+            {
+                if (data_types.ContainsKey(input))
+                    return new Token(data_types[input], input, null, line, column);
+                else
+                    return new Token(TokenType.ERROR, input, $"Invalid data type '{input}' should be {input.ToUpper()}", line, column);
+            }
+            else
+                return new Token(TokenType.IDENTIFIER, input, null, line, column);
+        }
+
+        public static int GetBinaryPrecedence(TokenType token_type)
+        {
+            switch (token_type)
+            {
+                case TokenType.OR:
+                    return 1;
+                case TokenType.AND:
+                    return 2;
+                case TokenType.LESSTHAN:
+                case TokenType.LESSEQUAL:
+                case TokenType.GREATERTHAN:
+                case TokenType.GREATEREQUAL:
+                case TokenType.EQUALTO:
+                case TokenType.NOTEQUAL:
+                    return 4;
+                case TokenType.PLUS:
+                case TokenType.MINUS:
+                    return 5;
+                case TokenType.PERCENT:
+                    return 6;
+                case TokenType.STAR:
+                case TokenType.SLASH:
+                    return 7;
                 default:
-                    return TokenType.IdentifierToken;
+                    return 0;
             }
         }
 
@@ -54,17 +69,17 @@ namespace InterpreterApp.Analysis.Syntax
         {
             switch (token_type)
             {
-                case TokenType.IntToken:
-                case TokenType.IntLiteralToken:
+                case TokenType.INT:
+                case TokenType.INTLITERAL:
                     return DataType.Int;
-                case TokenType.FloatToken:
-                case TokenType.FloatLiteralToken:
+                case TokenType.FLOAT:
+                case TokenType.FLOATLITERAL:
                     return DataType.Float;
-                case TokenType.CharToken:
-                case TokenType.CharLiteralToken:
+                case TokenType.CHAR:
+                case TokenType.CHARLITERAL:
                     return DataType.Char;
-                case TokenType.BoolToken:
-                case TokenType.BoolLiteralToken:
+                case TokenType.BOOL:
+                case TokenType.BOOLLITERAL:
                     return DataType.Bool;
                 default:
                     throw new Exception($"Unknown data type");
@@ -84,57 +99,24 @@ namespace InterpreterApp.Analysis.Syntax
             else
                 return DataType.String;
         }
-
-        public static int GetUnaryPrecedence(TokenType token_type)
+        
+        public static bool IsLogicalOperator(TokenType token_type)
         {
-            switch (token_type)
+            List<TokenType> logical_operator = new List<TokenType>
             {
-                case TokenType.PlusToken:
-                case TokenType.MinusToken:
-                    return 8;
-                default:
-                    return 0;
-            }
-                
+                TokenType.LESSTHAN, TokenType.GREATERTHAN,
+                TokenType.LESSEQUAL, TokenType.GREATEREQUAL,
+                TokenType.EQUALTO, TokenType.NOTEQUAL
+            };
+
+            return logical_operator.Contains(token_type);
         }
 
-        public static int GetBinaryPrecedence(TokenType token_type)
+        public static object ConvertValue(string val)
         {
-            switch (token_type)
-            {
-                case TokenType.OrToken:
-                    return 1;
-                case TokenType.AndToken:
-                    return 2;
-                case TokenType.NotToken:
-                    return 3;
-                case TokenType.LessThanToken:
-                case TokenType.LessEqualToken:
-                case TokenType.GreaterThanToken:
-                case TokenType.GreaterEqualToken:
-                case TokenType.EqualToToken:
-                case TokenType.NotEqualToken:
-                    return 4;
-                case TokenType.PlusToken:
-                case TokenType.MinusToken:
-                    return 5;
-                case TokenType.PercentToken:
-                    return 6;
-                case TokenType.StarToken:
-                case TokenType.SlashToken:
-                    return 7;
-                //case TokenType.OpenParenthesisToken:
-                //case TokenType.CloseParenthesisToken:
-                //    return 9;
-                default:
-                    return 0;
-            }
-        }
-
-        public static object GetProperValue(string val)
-        {
-            string float_pattern = @"^-?\d+(\.\d+)?$";
-            string int_pattern = @"^-?\d+$";
+            //string float_pattern = @"^-?\d+(\.\d+)?$";
+            string float_pattern = @"^(?:\+|\-)?\d*\.\d+$";
+            string int_pattern = @"^(?:\+|\-)?\d+$";
             string char_pattern = @"^'.'$";
             string bool_pattern = @"^""TRUE""|""FALSE""$";
 
@@ -142,24 +124,18 @@ namespace InterpreterApp.Analysis.Syntax
             Regex int_regex = new Regex(int_pattern);
             Regex char_regex = new Regex(char_pattern);
             Regex bool_regex = new Regex(bool_pattern);
-            Debug.WriteLine(val);
+
             if (int_regex.IsMatch(val))
                 return Convert.ToInt32(val);
-            else if(float_regex.IsMatch(val))
+            else if (float_regex.IsMatch(val))
                 return Convert.ToDouble(val);
             else if (char_regex.IsMatch(val))
                 return val;
             else if (bool_regex.IsMatch(val))
                 return val == "\"TRUE\"" ? true : false;
             else
-                return val;
+                throw new Exception($"Runtime Error: Invalid input {val}.");
         }
 
-        public static bool IsLogicalOperator(TokenType token_type)
-        {
-            return (token_type == TokenType.LessThanToken || token_type == TokenType.GreaterThanToken ||
-                token_type == TokenType.LessEqualToken || token_type == TokenType.GreaterEqualToken ||
-                token_type == TokenType.EqualToToken || token_type == TokenType.NotEqualToken);
-        }
     }
 }

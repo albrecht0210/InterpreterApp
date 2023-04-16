@@ -18,9 +18,9 @@ namespace InterpreterApp.Analysis.Syntax
             Column = column;
         }
 
-        public TokenType Token_Type { get; }
+        public TokenType Token_Type { get; set; }
         public string Code { get; }
-        public object Value { get; }
+        public object Value { get; set; }
         public int Line { get; }
         public int Column { get; }
 

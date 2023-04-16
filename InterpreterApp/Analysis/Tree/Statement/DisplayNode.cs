@@ -1,4 +1,5 @@
-﻿using InterpreterApp.Analysis.Tree.Expression;
+﻿using InterpreterApp.Analysis.Syntax;
+using InterpreterApp.Analysis.Tree.Expression;
 using InterpreterApp.Analysis.Type;
 using System;
 using System.Collections.Generic;
@@ -10,15 +11,13 @@ namespace InterpreterApp.Analysis.Tree.Statement
 {
     public class DisplayNode : StatementNode
     {
-        public DisplayNode(Dictionary<ExpressionNode, bool> expression, int line, int column)
+        public DisplayNode(Token display_token, List<ExpressionNode> expressions)
         {
-            Expression = expression;
-            Line = line;
-            Column = column;
+            Display_Token = display_token;
+            Expressions = expressions;
         }
 
-        public Dictionary<ExpressionNode, bool> Expression { get; }
-        public int Line { get; }
-        public int Column { get; }
+        public Token Display_Token { get; }
+        public List<ExpressionNode> Expressions { get; }
     }
 }

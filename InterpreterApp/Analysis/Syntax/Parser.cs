@@ -1,12 +1,6 @@
 ﻿using InterpreterApp.Analysis.Tree;
 using InterpreterApp.Analysis.Tree.Statement;
 using InterpreterApp.Analysis.Tree.Expression;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using InterpreterApp.Analysis.Type;
 
 namespace InterpreterApp.Analysis.Syntax
@@ -15,156 +9,130 @@ namespace InterpreterApp.Analysis.Syntax
     {
         private readonly Lexer _lexer;
         private Token _current_token;
-        private int _cond_tabs;
+        private List<string> _variable_names;
 
         public Parser(Lexer lexer)
         {
             this._lexer = lexer;
             this._current_token = lexer.GetToken();
-            this._cond_tabs = 0;
+            this._variable_names = new List<string>();
         }
 
         // Parse the whole code
-        public ProgramNode ParseProgram()
+        public ProgramNode ParseProgram(TokenType token_type = TokenType.CODE)
         {
-            while (MatchToken(TokenType.CommentToken))
-            {
-                ConsumeToken(TokenType.CommentToken);
-                ConsumeToken(TokenType.NewLineToken);
-            }
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
-            while (MatchToken(TokenType.NewLineToken))
-                ConsumeToken(TokenType.NewLineToken);
+            ConsumeToken(TokenType.BEGIN);
+            ConsumeToken(token_type);
 
-            ConsumeToken(TokenType.BeginToken);
-            ConsumeToken(TokenType.CodeToken);
-            ConsumeToken(TokenType.NewLineToken);
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
             List<StatementNode> statements = ParseStatements();
 
-            ConsumeToken(TokenType.EndToken);
-            ConsumeToken(TokenType.CodeToken);
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
-            while (MatchToken(TokenType.NewLineToken))
-                ConsumeToken(TokenType.NewLineToken);
+            ConsumeToken(TokenType.END);
+            ConsumeToken(token_type);
 
-            ConsumeToken(TokenType.EndOfFileToken);
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
+
+            if (token_type == TokenType.CODE)
+                ConsumeToken(TokenType.ENDOFFILE);
 
             return new ProgramNode(statements);
         }
 
         // Parse the if block
-        private ProgramNode ParseIfProgram()
+        /*private ProgramNode ParseIfProgram()
         {
-            for (int i = 0; i < _cond_tabs; i++)
-                ConsumeToken(TokenType.TabToken);
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
-            ConsumeToken(TokenType.TabToken);
-            ConsumeToken(TokenType.BeginToken);
-            ConsumeToken(TokenType.IfToken);
-            ConsumeToken(TokenType.NewLineToken);
+            ConsumeToken(TokenType.BEGIN);
+            ConsumeToken(TokenType.IF);
 
-            this._cond_tabs++;
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
             List<StatementNode> statements = ParseStatements();
 
-            this._cond_tabs--;
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
-            ConsumeToken(TokenType.EndToken);
-            ConsumeToken(TokenType.IfToken);
-            ConsumeToken(TokenType.NewLineToken);
+            ConsumeToken(TokenType.END);
+            ConsumeToken(TokenType.IF);
+
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
             return new ProgramNode(statements);
-        }
+        }*/
 
         // Parse the while block
-        private ProgramNode ParseWhileProgram()
+        /*private ProgramNode ParseWhileProgram()
         {
-            for (int i = 0; i < _cond_tabs; i++)
-                ConsumeToken(TokenType.TabToken);
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
-            ConsumeToken(TokenType.TabToken);
-            ConsumeToken(TokenType.BeginToken);
-            ConsumeToken(TokenType.WhileToken);
-            ConsumeToken(TokenType.NewLineToken);
-
-            this._cond_tabs++;
+            ConsumeToken(TokenType.BEGIN);
+            ConsumeToken(TokenType.WHILE);
+            
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
             List<StatementNode> statements = ParseStatements();
+            
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
-            this._cond_tabs--;
-
-            ConsumeToken(TokenType.EndToken);
-            ConsumeToken(TokenType.WhileToken);
-            ConsumeToken(TokenType.NewLineToken);
+            ConsumeToken(TokenType.END);
+            ConsumeToken(TokenType.WHILE);
+            
+            while (MatchToken(TokenType.NEWLINE))
+                ConsumeToken(TokenType.NEWLINE);
 
             return new ProgramNode(statements);
-        }
-
+        }*/
 
         // Start Parse Statements
-
         private List<StatementNode> ParseStatements()
         {
             List<StatementNode> statement_list = new List<StatementNode>();
 
-
-            while (!MatchToken(TokenType.EndToken))
+            while (!MatchToken(TokenType.END))
             {
-                while (MatchToken(TokenType.NewLineToken))
-                    ConsumeToken(TokenType.NewLineToken);
-
-                int i = 0;
-                do
-                {
-                    ConsumeToken(TokenType.TabToken);
-                    i++;
-                } while (i < _cond_tabs);
-
-                if (MatchToken(TokenType.IntToken) || MatchToken(TokenType.FloatToken) ||
-                    MatchToken(TokenType.CharToken) || MatchToken(TokenType.BoolToken))
-                {
-                    //Debug.WriteLine("IS PARSE VARIABLE DECLARATION");
+                if (MatchToken(TokenType.INT) || MatchToken(TokenType.FLOAT) ||
+                    MatchToken(TokenType.CHAR) || MatchToken(TokenType.BOOL))
                     statement_list.Add(ParseVariableDeclarationStatement());
-                }
-                else if (MatchToken(TokenType.IdentifierToken))
-                {
-                    //Debug.WriteLine("IS PARSE ASSIGNMENT");
+
+                else if (MatchToken(TokenType.IDENTIFIER))
                     statement_list.Add(ParseAssignmentStatement());
-                }
-                else if (MatchToken(TokenType.DisplayToken))
-                {
-                    //Debug.WriteLine("IS PARSE DISPLAY");
+
+                else if (MatchToken(TokenType.DISPLAY))
                     statement_list.Add(ParseDisplayStatement());
-                }
-                else if (MatchToken(TokenType.CommentToken))
-                {
-                    //Debug.WriteLine("IS PARSE COMMENT");
-                    ConsumeToken(TokenType.CommentToken);
-                    ConsumeToken(TokenType.NewLineToken);
-                }
-                else if (MatchToken(TokenType.ScanToken))
-                {
-                    //Debug.WriteLine("IS PARSE SCAN");
+
+                else if (MatchToken(TokenType.SCAN))
                     statement_list.Add(ParseScanStatement());
 
-                }
-                else if (MatchToken(TokenType.IfToken))
-                {
-                    //Debug.WriteLine("IS PARSE IF");
+                else if (MatchToken(TokenType.IF))
                     statement_list.Add(ParseIfStatement());
-                }
-                else if (MatchToken(TokenType.WhileToken))
-                {
-                    //Debug.WriteLine("IS PARSE IF");
+
+                else if (MatchToken(TokenType.WHILE))
                     statement_list.Add(ParseWhileStatement());
-                }
-                else if (MatchToken(TokenType.EndToken))
-                    break;
-                else if (MatchToken(TokenType.EndOfFileToken))
-                    throw new Exception($"({_current_token.Line},{_current_token.Column}): Missing End.");
+
+                else if (MatchToken(TokenType.ENDOFFILE))
+                    throw new Exception($"({_current_token.Line},{_current_token.Column}): Missing End Statement.");
+
                 else
                     throw new Exception($"({_current_token.Line},{_current_token.Column}): Invalid syntax \"{_current_token.Code}\".");
+
+                while (MatchToken(TokenType.NEWLINE))
+                    ConsumeToken(TokenType.NEWLINE);
             }
 
             return statement_list;
@@ -172,307 +140,405 @@ namespace InterpreterApp.Analysis.Syntax
 
         private StatementNode ParseVariableDeclarationStatement()
         {
+            // ex. INT a,b=5,c
+            // Read and remove the current token
             Token data_type_token = _current_token;
             ConsumeToken(data_type_token.Token_Type);
 
+            // Dictionary of variables with the value
             Dictionary<string, ExpressionNode> variables = new Dictionary<string, ExpressionNode>();
 
+            // Getting the variable name and value, value can be null
+            // GetVariable function is declared last in this class
             (string, ExpressionNode) variable = GetVariable();
 
             variables.Add(variable.Item1, variable.Item2);
+            _variable_names.Add(variable.Item1);
 
-            while (MatchToken(TokenType.CommaToken))
+            // While token is comma then call GetVariable again until
+            // there's no comma token.
+            while (MatchToken(TokenType.COMMA))
             {
-                ConsumeToken(TokenType.CommaToken);
+                ConsumeToken(TokenType.COMMA);
                 variable = GetVariable();
                 variables.Add(variable.Item1, variable.Item2);
+                _variable_names.Add(variable.Item1);
             }
 
-            ConsumeToken(TokenType.NewLineToken);
-
-            return new VariableDeclarationNode(data_type_token.Token_Type, variables, data_type_token.Line, data_type_token.Column);
+            // Create the Variable Declaration Statement
+            return new VariableDeclarationNode(data_type_token, variables);
         }
-
+        
         private StatementNode ParseAssignmentStatement()
         {
+            // ex. x=y=4
+            // List of identifiers and its equals
             List<string> identifiers = new List<string>();
-            identifiers.Add(_current_token.Code);
+            List<Token> equals = new List<Token>();
+
+            // Read and remove the current token
             Token identifier_token = _current_token;
-            
-            ConsumeToken(TokenType.IdentifierToken);
-            ConsumeToken(TokenType.EqualsToken);
+            ConsumeToken(TokenType.IDENTIFIER);
+            Token equal_token = _current_token;
+            ConsumeToken(TokenType.EQUAL);
+
+            identifiers.Add(identifier_token.Code);
+            equals.Add(equal_token);
 
             ExpressionNode expression_value = ParseExpression();
-            
-            while (MatchToken(TokenType.EqualsToken))
+
+            while (MatchToken(TokenType.EQUAL))
             {
-                IdentifierNode id_expr = (IdentifierNode)expression_value;
-                identifiers.Add(id_expr.Name);
-                ConsumeToken(TokenType.EqualsToken);
+                // Read and remove the current token
+                IdentifierNode iden_expr = (IdentifierNode)expression_value;
+                equal_token = _current_token;
+                ConsumeToken(TokenType.EQUAL);
+                
+                identifiers.Add(iden_expr.Name);
+                equals.Add(equal_token);
+
+                // Read the literal or expression
                 expression_value = ParseExpression();
             }
-            ConsumeToken(TokenType.NewLineToken);
 
-            return new AssignmentNode(identifiers, expression_value, identifier_token.Line, identifier_token.Column);
+            // Create the Assignment Statement
+            return new AssignmentNode(identifiers, equals, expression_value);
         }
-
+        
         private StatementNode ParseDisplayStatement()
         {
-            Token display = _current_token;
-            ConsumeToken(TokenType.DisplayToken);
-            ConsumeToken(TokenType.ColonToken);
+            // Read and remove the current token
+            Token display_token = _current_token;
+            ConsumeToken(TokenType.DISPLAY);
+            ConsumeToken(TokenType.COLON);
 
-            Dictionary<ExpressionNode, bool> expressions = new Dictionary<ExpressionNode, bool>();
-            bool is_newline = false;
+            // List of expressions
+            List<ExpressionNode> expressions = new List<ExpressionNode>();
 
-            if (MatchToken(TokenType.DollarToken))
+            // If display starts with '$'
+            // ex. DISPLAY: $ ....
+            if (MatchToken(TokenType.DOLLAR))
             {
-                ConsumeToken(TokenType.DollarToken);
-                is_newline = true;
-                if (MatchToken(TokenType.AmpersandToken))
-                    ConsumeToken(TokenType.AmpersandToken);
+                expressions.Add(new LiteralNode(_current_token, "\n"));
+                ConsumeToken(TokenType.DOLLAR);
 
-                if (MatchToken(TokenType.NewLineToken))
+                // While token is & iterate until no & token.
+                while (MatchToken(TokenType.AMPERSAND))
                 {
-                    expressions.Add(new LiteralNode("", display.Line, display.Column), true);
-                    ConsumeToken(TokenType.NewLineToken);
-                    return new DisplayNode(expressions, display.Line, display.Column);
-                }
-            }
+                    ConsumeToken(TokenType.AMPERSAND);
 
-            expressions.Add(ParseExpression(), is_newline);
+                    // If newline is next to & throw an error
+                    if (MatchToken(TokenType.NEWLINE))
+                        throw new Exception($"({_current_token.Line},{_current_token.Column}): Unexpected {_current_token.Token_Type} token expected expression token");
 
-            is_newline = false;
-
-            while (MatchToken(TokenType.AmpersandToken))
-            {
-                ConsumeToken(TokenType.AmpersandToken);
-
-                if (MatchToken(TokenType.DollarToken))
-                {
-                    ConsumeToken(TokenType.DollarToken);
-                    if (MatchToken(TokenType.AmpersandToken))
+                    // If $ is next to &, create a new Literal Expression with
+                    // the value \n
+                    if (MatchToken(TokenType.DOLLAR))
                     {
-                        ConsumeToken(TokenType.AmpersandToken);
-                        expressions.Add(ParseExpression(), true);
+                        expressions.Add(new LiteralNode(_current_token, "\n"));
+                        ConsumeToken(TokenType.DOLLAR);
                     }
-
-                    if (MatchToken(TokenType.NewLineToken))
-                        expressions.Add(new LiteralNode("", display.Line, display.Column), true);
+                    // Else get the expression
+                    else
+                        expressions.Add(ParseExpression());
                 }
-                else
-                    expressions.Add(ParseExpression(), false);
+
+                // If the token is not newline then throw an error
+                if (!MatchToken(TokenType.NEWLINE))
+                    throw new Exception($"({_current_token.Line},{_current_token.Column}): Unexpected {_current_token.Token_Type} token expected {TokenType.NEWLINE} token");
+                
+                // Create the Display Statement
+                return new DisplayNode(display_token, expressions);
             }
+            // If display starts with expression
+            // ex. DISPLAY: 6 ....
+            else if (MatchToken(TokenType.ESCAPE) || MatchToken(TokenType.IDENTIFIER) || MatchToken(TokenType.INTLITERAL) || MatchToken(TokenType.FLOATLITERAL)
+                || MatchToken(TokenType.CHARLITERAL) || MatchToken(TokenType.BOOLLITERAL) || MatchToken(TokenType.STRINGLITERAL))
+            {
+                expressions.Add(ParseExpression());
 
-            ConsumeToken(TokenType.NewLineToken);
+                // While token is & iterate until no & token.
+                while (MatchToken(TokenType.AMPERSAND))
+                {
+                    ConsumeToken(TokenType.AMPERSAND);
 
-            return new DisplayNode(expressions, display.Line, display.Column);
+                    // If newline is next to & throw an error
+                    if (MatchToken(TokenType.NEWLINE))
+                        throw new Exception($"({_current_token.Line},{_current_token.Column}): Unexpected {_current_token.Token_Type} token expected expression token");
+
+                    // If $ is next to &, create a new Literal Expression with
+                    // the value \n
+                    if (MatchToken(TokenType.DOLLAR))
+                    {
+                        expressions.Add(new LiteralNode(_current_token, "\n"));
+                        ConsumeToken(TokenType.DOLLAR);
+                    }
+                    // Else get the expression
+                    else
+                        expressions.Add(ParseExpression());
+                }
+
+                // If the token is not newline then throw an error
+                if (!MatchToken(TokenType.NEWLINE))
+                    throw new Exception($"({_current_token.Line},{_current_token.Column}): Unexpected {_current_token.Token_Type} token expected {TokenType.NEWLINE} token");
+                
+                // Create the Display Statement
+                return new DisplayNode(display_token, expressions);
+            }
+            // If display starts with '&'
+            // ex. DISPLAY: & ....
+            else
+                throw new Exception($"({_current_token.Line},{_current_token.Column}): Unexpected {_current_token.Token_Type} token expected expression token");
         }
 
         private StatementNode ParseScanStatement()
         {
-            Token scan = _current_token;
-            ConsumeToken(TokenType.ScanToken);
-            ConsumeToken(TokenType.ColonToken);
+            // ex. SCAN: a,b
+            // Read and remove the current token
+            Token scan_token = _current_token;
+            ConsumeToken(TokenType.SCAN);
+            ConsumeToken(TokenType.COLON);
 
+            // List of identifiers
             List<string> identifiers = new List<string>();
-            identifiers.Add(_current_token.Code);
-            ConsumeToken(TokenType.IdentifierToken);
 
-            while (MatchToken(TokenType.CommaToken))
+            // Store the identifier and remove the current token
+            identifiers.Add(_current_token.Code);
+            ConsumeToken(TokenType.IDENTIFIER);
+            
+            // While the token is comma then iterate until it doesn't see a comma
+            while (MatchToken(TokenType.COMMA)) 
             {
-                ConsumeToken(TokenType.CommaToken);
+                ConsumeToken(TokenType.COMMA);
                 identifiers.Add(_current_token.Code);
-                ConsumeToken(TokenType.IdentifierToken);
+                ConsumeToken(TokenType.IDENTIFIER);
             }
 
-            ConsumeToken(TokenType.NewLineToken);
-
-            return new ScanNode(identifiers, scan.Line, scan.Column);
+            // Create the Scan Statement
+            return new ScanNode(scan_token, identifiers);
         }
 
         private StatementNode ParseIfStatement()
         {
+            bool is_else = false;
+            // List of condition in every if, else if
             List<ExpressionNode> conditions = new List<ExpressionNode>();
+            // List of statement in every if, else if, else
             List<ProgramNode> statement_blocks = new List<ProgramNode>();
-            List<int> lines = new List<int>();
-            List<int> columns = new List<int>();
+            // List of tokens (IF, ELSE, ELSE)
+            List<Token> tokens = new List<Token>();
 
-            lines.Add(_current_token.Line);
-            columns.Add(_current_token.Column);
-            ConsumeToken(TokenType.IfToken);
+            // ex. IF (a == b)
+            // Store token and condition
+            tokens.Add(_current_token);
+            ConsumeToken(TokenType.IF);
+            conditions.Add(ParseConditionExpression());
 
-            conditions.Add(ParseExpression());
+            // Store the statement block in if
+            statement_blocks.Add(ParseProgram(TokenType.IF));
 
-            ConsumeToken(TokenType.NewLineToken);
-
-            statement_blocks.Add(ParseIfProgram());
-            
-            for (int i = 0; i < _cond_tabs; i++)
-                ConsumeToken(TokenType.TabToken);
-
-            if (MatchToken(TokenType.TabToken))
-                ConsumeToken(TokenType.TabToken);
-
-            while (MatchToken(TokenType.ElseToken))
+            // While the token is else, iterate
+            while (MatchToken(TokenType.ELSE))
             {
-                if (MatchToken(TokenType.TabToken))
-                    ConsumeToken(TokenType.TabToken);
-                lines.Add(_current_token.Line);
-                columns.Add(_current_token.Column);
-                ConsumeToken(TokenType.ElseToken);
+                // Check if the else only statement has already passed
+                if (is_else)
+                    throw new Exception($"({_current_token.Line}, {_current_token.Column}): Invalid syntax {_current_token.Token_Type}");
 
-                if (MatchToken(TokenType.IfToken))
+                // Store token
+                tokens.Add(_current_token);
+                ConsumeToken(TokenType.ELSE);
+
+                // ELSE IF (a <> b)
+                if (MatchToken(TokenType.IF))
                 {
-                    ConsumeToken(TokenType.IfToken);
-                    conditions.Add(ParseExpression());
+                    // Store condition
+                    ConsumeToken(TokenType.IF);
+                    conditions.Add(ParseConditionExpression());
                 }
+                // ELSE
                 else
+                {
                     conditions.Add(null);
+                    is_else = true;
+                }
 
-                ConsumeToken(TokenType.NewLineToken);
-        
-                statement_blocks.Add(ParseIfProgram());
-
-                for (int i = 0; i < _cond_tabs; i++)
-                    ConsumeToken(TokenType.TabToken);
+                // Store the statement block in else
+                statement_blocks.Add(ParseProgram(TokenType.IF));
             }
 
-            return new ConditionalNode(conditions, statement_blocks, lines, columns);
+            // Create the Condition Statement
+            return new ConditionalNode(tokens, conditions, statement_blocks);
         }
 
         private StatementNode ParseWhileStatement()
         {
+            // ex. WHILE (a < 5)
+            // Read and remove the current token
             Token while_token = _current_token;
-            ConsumeToken(TokenType.WhileToken);
+            ConsumeToken(TokenType.WHILE);
 
-            ExpressionNode condition = ParseExpression();
+            // Parse the condition
+            ExpressionNode condition = ParseConditionExpression();
 
-            ConsumeToken(TokenType.NewLineToken);
+            // Parse the statement block
+            ProgramNode statement_block = ParseProgram(TokenType.WHILE);
 
-            ProgramNode statement_block = ParseWhileProgram();
-
-            return new LoopNode(condition, statement_block, while_token.Line, while_token.Column);
+            // Create the Loop Statement
+            return new LoopNode(while_token, condition, statement_block);
         }
-
         // End Parse Statements
 
         // Start Parse Expressions
-
         private ExpressionNode ParseExpression()
         {
             ExpressionNode expression;
-            if (MatchToken(TokenType.EscapeToken))
+            if (MatchToken(TokenType.ESCAPE))
             {
-                Token token = _current_token;
-                ConsumeToken(TokenType.EscapeToken);
-                return new LiteralNode(token.Value, token.Line, token.Column);
+                Token escape_token = _current_token;
+                ConsumeToken(TokenType.ESCAPE);
+                return new LiteralNode(escape_token, escape_token.Value);
             }
-            else if (MatchToken(TokenType.OpenParenthesisToken))
+            else if (MatchToken(TokenType.OPENPARENTHESIS))
             {
                 expression = ParseParenthesisExpression();
                 return expression;
             }
-            else if (MatchToken(TokenType.PlusToken) || MatchToken(TokenType.MinusToken) || MatchToken(TokenType.NotToken))
+            else if (MatchToken(TokenType.PLUS) || MatchToken(TokenType.MINUS) || MatchToken(TokenType.NOT))
             {
                 expression = ParseUnaryExpression();
                 return expression;
             } 
-            else if (MatchToken(TokenType.IdentifierToken) || MatchToken(TokenType.IntLiteralToken) || MatchToken(TokenType.FloatLiteralToken) ||
-                MatchToken(TokenType.CharLiteralToken) || MatchToken(TokenType.BoolLiteralToken) || MatchToken(TokenType.StringLiteralToken))
+            else if (MatchToken(TokenType.IDENTIFIER) || MatchToken(TokenType.INTLITERAL) || MatchToken(TokenType.FLOATLITERAL)
+                || MatchToken(TokenType.CHARLITERAL) || MatchToken(TokenType.BOOLLITERAL) || MatchToken(TokenType.STRINGLITERAL))
             {
                 expression = ParseBinaryExpression();
                 return expression;
             }
             else
-                throw new Exception($"({_current_token.Line}, {_current_token.Column}): Invalid syntax \"{_current_token.Code}\".");
+                throw new Exception($"({_current_token.Line}, {_current_token.Column}): Unexpected {_current_token.Token_Type} token expected expression token.");
         }
         
         private ExpressionNode ParseParenthesisExpression()
         {
+            // ex. ((1 + 1) - 10) * 15
+            // Read and remove the current token
             Token open_parenthesis = _current_token;
-            ConsumeToken(TokenType.OpenParenthesisToken);
+            ConsumeToken(TokenType.OPENPARENTHESIS);
 
             ExpressionNode expression = ParseExpression();
 
+            // Read and remove the current token
             Token close_parenthesis = _current_token;
-            ConsumeToken(TokenType.CloseParenthesisToken);
+            ConsumeToken(TokenType.CLOSEPARENTHESIS);
 
+            // Get precedence of the next token
             int precedence = Grammar.GetBinaryPrecedence(_current_token.Token_Type);
 
+            // If precedence is greater than zero
             if (precedence > 0)
             {
-                ParenthesisNode paren_expr = new ParenthesisNode(open_parenthesis, expression, close_parenthesis, open_parenthesis.Line, open_parenthesis.Column);
+                // Create the parenthesis expression and pass it to the ParseBinaryExpression
+                ParenthesisNode paren_expr = new ParenthesisNode(open_parenthesis, expression, close_parenthesis);
                 return ParseBinaryExpression(paren_expr);
 
             }
-            return new ParenthesisNode(open_parenthesis, expression, close_parenthesis, open_parenthesis.Line, open_parenthesis.Column);
+            // Create the parenthesis expression
+            return new ParenthesisNode(open_parenthesis, expression, close_parenthesis);
+        }
+
+        private ExpressionNode ParseConditionExpression()
+        {
+            // ex. (a==b)
+            // Read and remove the current token
+            Token open_parenthesis = _current_token;
+            ConsumeToken(TokenType.OPENPARENTHESIS);
+
+            ExpressionNode expression = ParseExpression();
+
+            // Read and remove the current token
+            Token close_parenthesis = _current_token;
+            ConsumeToken(TokenType.CLOSEPARENTHESIS);
+
+            // Create the parenthesis expression
+            return new ParenthesisNode(open_parenthesis, expression, close_parenthesis);
         }
 
         private ExpressionNode ParseUnaryExpression()
         {
-            Token unary = _current_token;
-            ConsumeToken(unary.Token_Type);
+            // ex. -1 || +2 || NOT "TRUE"
+            // Read and remove the current token
+            Token unary_token = _current_token;
+            ConsumeToken(unary_token.Token_Type);
 
             ExpressionNode expression = ParseExpression();
 
-            return new UnaryNode(unary, expression, unary.Line, unary.Column);
+            // Create the unary expression
+            return new UnaryNode(unary_token, expression);
         }
 
         private ExpressionNode ParseBinaryExpression(ExpressionNode prev_left = null)
         {
+            // ex. 10 + 6 * 6
+            // If prev_left parameter is not null
+            // set left as prev_left
             ExpressionNode left;
             if (prev_left != null)
                 left = prev_left;
+            // Else set left using ParseTerm
             else
                 left = ParseTerm();
 
+            // Get precedence of the next token
             int precedence = Grammar.GetBinaryPrecedence(_current_token.Token_Type);
 
+            // While precedence is greater than zero means that the current token is an operator
             while (precedence > 0)
             {
-                if (MatchToken(TokenType.PlusToken) || MatchToken(TokenType.MinusToken) ||
-                    MatchToken(TokenType.StarToken) || MatchToken(TokenType.SlashToken) ||
-                    MatchToken(TokenType.LessThanToken) || MatchToken(TokenType.GreaterThanToken) ||
-                    MatchToken(TokenType.LessEqualToken) || MatchToken(TokenType.GreaterEqualToken) ||
-                    MatchToken(TokenType.EqualToToken) || MatchToken(TokenType.NotEqualToken) ||
-                    MatchToken(TokenType.AndToken) || MatchToken(TokenType.OrToken) || MatchToken(TokenType.NotToken))
-                {
-                    Token binary = _current_token;
-                    ConsumeToken(binary.Token_Type);
-                    ExpressionNode right = ParseTerm();
-                    int next_precedence = Grammar.GetBinaryPrecedence(_current_token.Token_Type);
-                    if (next_precedence >= precedence)
-                        right = ParseBinaryExpression(right);
-                    left = new BinaryNode(left, binary, right, binary.Line, binary.Column);
-                    precedence = Grammar.GetBinaryPrecedence(_current_token.Token_Type);
-                }
+                // Read and remove the current operator token
+                Token binary_token = _current_token;
+                ConsumeToken(binary_token.Token_Type);
+
+                // Set right using ParseTerm
+                ExpressionNode right = ParseTerm();
+
+                // Get next precedence of the next token
+                int next_precedence = Grammar.GetBinaryPrecedence(_current_token.Token_Type);
+                
+                // If the next precedence is greater than to the previous precedence
+                // then set right using ParseBinaryExpression and pass the previous value of right as parameter
+                if (next_precedence > precedence)
+                    right = ParseBinaryExpression(right);
+                // Set left as new Binary node using the previous value of left
+                left = new BinaryNode(left, binary_token, right);
+
+                // Get precedence of the next token
+                precedence = Grammar.GetBinaryPrecedence(_current_token.Token_Type);
             }
+
             return left;
         }
 
         private ExpressionNode ParseTerm()
         {
-            if (MatchToken(TokenType.IdentifierToken))
+            if (MatchToken(TokenType.IDENTIFIER))
             {
-                Token token = _current_token;
-                ConsumeToken(TokenType.IdentifierToken);
-                return new IdentifierNode(token.Code, token.Line, token.Column);
+                Token identifier_token = _current_token;
+                ConsumeToken(TokenType.IDENTIFIER);
+                return new IdentifierNode(identifier_token, identifier_token.Code);
             }
-            else if (MatchToken(TokenType.IntLiteralToken) || MatchToken(TokenType.FloatLiteralToken) ||
-                    MatchToken(TokenType.CharLiteralToken) || MatchToken(TokenType.BoolLiteralToken) ||
-                    MatchToken(TokenType.StringLiteralToken))
+            else if (MatchToken(TokenType.INTLITERAL) || MatchToken(TokenType.FLOATLITERAL) || MatchToken(TokenType.CHARLITERAL)
+                || MatchToken(TokenType.BOOLLITERAL) || MatchToken(TokenType.STRINGLITERAL))
             {
-                Token token = _current_token;
-                ConsumeToken(token.Token_Type);
-                return new LiteralNode(token.Value, token.Line, token.Column);
+                Token literal_token = _current_token;
+                ConsumeToken(literal_token.Token_Type);
+                return new LiteralNode(literal_token, literal_token.Value);
             }
-            else if (MatchToken(TokenType.OpenParenthesisToken))
+            else if (MatchToken(TokenType.OPENPARENTHESIS))
                 return ParseParenthesisExpression();
-            else if (MatchToken(TokenType.MinusToken) || MatchToken(TokenType.PlusToken))
+            else if (MatchToken(TokenType.MINUS) || MatchToken(TokenType.PLUS) || MatchToken(TokenType.NOT))
                 return ParseUnaryExpression();
             else
-                throw new Exception($"({_current_token.Line}, {_current_token.Column}): Invalid syntax \"{_current_token.Code}\".");
+                throw new Exception($"({_current_token.Line}, {_current_token.Column}): Unexpected {_current_token} token expected expression token");
         }
 
         // End Parse Expressions
@@ -480,18 +546,37 @@ namespace InterpreterApp.Analysis.Syntax
         // Get next token
         private void ConsumeToken(TokenType token_type)
         {
+            // If param token_type is the same as the current token type
             if (MatchToken(token_type))
             {
+                Token prev_token = _current_token;
                 _current_token = _lexer.GetToken();
-                if (MatchToken(TokenType.ErrorToken)) 
-                    throw new Exception($"({_current_token.Line}, {_current_token.Column}): Invalid syntax \"{_current_token.Code}\".");
+                // If the new current token is error
+                if (MatchToken(TokenType.ERROR))
+                {
+                    // Check if the previous token is data type
+                    if (prev_token.Token_Type == TokenType.INT || prev_token.Token_Type == TokenType.FLOAT || prev_token.Token_Type == TokenType.CHAR || prev_token.Token_Type == TokenType.BOOL)
+                    {
+                        // If the value/message of the error token is Invalid keyword or Invalid data type
+                        if (_current_token.Value.ToString().Contains("Invalid keyword") || _current_token.Value.ToString().Contains("Invalid data type"))
+                        {
+                            _current_token.Token_Type = TokenType.IDENTIFIER;
+                            _current_token.Value = null;
+                        }
+                    }
+                    // If the previous token is not data type but in the variable names list it contains the code
+                    else if (_variable_names.Contains(_current_token.Code))
+                    {
+                        _current_token.Token_Type = TokenType.IDENTIFIER;
+                        _current_token.Value = null;
+                    }
+                    // If none of the condition met just throw exception
+                    else
+                        throw new Exception($"({_current_token.Line}, {_current_token.Column}): {_current_token.Value}");
+                }
             }
             else
-            {
-                if (token_type == TokenType.TabToken)
-                    throw new Exception($"({_current_token.Line},{_current_token.Column}): Incorrect Identation");
-                throw new Exception($"({_current_token.Line},{_current_token.Column}): Unexpected token {_current_token.Token_Type} expected {token_type}");
-            }
+                throw new Exception($"({_current_token.Line},{_current_token.Column}): Unexpected token {_current_token.Token_Type} token expected {token_type} token");
         }
 
         // Match current to param {token_type}
@@ -504,16 +589,14 @@ namespace InterpreterApp.Analysis.Syntax
         private (string, ExpressionNode) GetVariable()
         {
             Token identifier = _current_token;
-            Token value;
 
-            ConsumeToken(TokenType.IdentifierToken);
+            ConsumeToken(TokenType.IDENTIFIER);
 
-            if (MatchToken(TokenType.EqualsToken))
+            if (MatchToken(TokenType.EQUAL))
             {
-                ConsumeToken(TokenType.EqualsToken);
+                ConsumeToken(TokenType.EQUAL);
                 return (identifier.Code, ParseExpression());
             }
-
             return (identifier.Code, null);
         }
 
