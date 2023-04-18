@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using InterpreterApp.Analysis.Type;
 using static System.Net.Mime.MediaTypeNames;
@@ -179,34 +180,24 @@ namespace InterpreterApp.Analysis.Syntax
             int line_col = _column;
 
             Next();
-            while (Current != '\'')
+            // ' '
+            while (Current != '\'' && !char.IsWhiteSpace(LookAhead))
                 Next();
+            Next();
 
-            if (Current == '\'')
+            string char_pattern = @"^'(?:\[[\[\]\&\$\#']\])'|'[^\[\]\&\$\#']'$";
+            Regex char_regex = new Regex(char_pattern);
+            
+            int length = _position - start;
+            string text = _code.Substring(start, length);
+            object value = null;
+
+            if (char_regex.IsMatch(text))
             {
-                Next();
-                int length = _position - start;
-                string text = _code.Substring(start, length);
-                object value = null;
-
-                if (text.Length == 3)
-                {
-                    value = text.ToCharArray()[1];
-                    return new Token(TokenType.CHARLITERAL, text, value, _line, line_col);
-                }
-                else if (text.Length == 5)
-                {
-                    string escape_text = text.Substring(1, text.Length - 1);
-                    if (escape_text == "[[]" || escape_text == "[]]" || escape_text == "[&]" || escape_text == "[$]" || escape_text == "[#]" || escape_text == "[']")
-                    {
-                        value = escape_text.ToCharArray()[1];
-                        return new Token(TokenType.CHARLITERAL, text, value, _line, line_col);
-                    }
-                    return new Token(TokenType.ERROR, text, "Invalid CHAR literal.", _line, line_col);
-                }
-                return new Token(TokenType.ERROR, text, "Invalid CHAR literal.", _line, line_col);
+                value = text.ToCharArray()[text.Length / 2];
+                return new Token(TokenType.CHARLITERAL, text, value, _line, line_col);
             }
-            return new Token(TokenType.ERROR, _code.Substring(start, (_position - start)), "Invalid CHAR literal.", _line, line_col);
+            return new Token(TokenType.ERROR, text, "Invalid CHAR literal.", _line, line_col);
         }
 
         private Token GetBooleanOrStringLiteralToken()
@@ -215,29 +206,30 @@ namespace InterpreterApp.Analysis.Syntax
             int line_col = _column;
 
             Next();
-            while (Current != '\"' && Current != '\n')
+            // " "
+            while (Current != '\"' && !char.IsWhiteSpace(LookAhead))
                 Next();
+            Next();
 
-            if (Current == '\"')
+            string bool_pattern = @"^\""TRUE\""$|^\""FALSE\""$";
+            string string_pattern = @"^""[^""]*""$";
+            Regex bool_regex = new Regex(bool_pattern);
+            Regex string_regex = new Regex(string_pattern);
+
+            int length = _position - start;
+            string text = _code.Substring(start, length);
+
+            Debug.WriteLine(text);
+
+            if (bool_regex.IsMatch(text))
+                return new Token(TokenType.BOOLLITERAL, text, text == "\"TRUE\"" ? true : false, _line, line_col);
+            else if (string_regex.IsMatch(text))
+                return new Token(TokenType.STRINGLITERAL, text, text.Substring(1, text.Length - 2), _line, line_col);
+            else
             {
-                Next();
-                int length = _position - start;
-                string text = _code.Substring(start, length);
-
-                if (text == "\"TRUE\"")
-                    return new Token(TokenType.BOOLLITERAL, text, true, _line, line_col);
-                else if (text == "\"FALSE\"")
-                    return new Token(TokenType.BOOLLITERAL, text, false, _line, line_col);
-                else
-                    return new Token(TokenType.STRINGLITERAL, text, _code.Substring(start + 1, length - 2), _line, line_col);
+                string error_message = text.Contains("TRUE") || text.Contains("FALSE") ? "Invalid BOOL literal" : "Invalid STRING literal";
+                return new Token(TokenType.ERROR, text, error_message, _line, line_col);
             }
-
-            int err_length = _position - start;
-            string err_text = _code.Substring(start, err_length);
-
-            if (err_text == "\"TRUE" || err_text == "\"FALSE")
-                return new Token(TokenType.ERROR, err_text, "Invalid BOOL literal.", _line, line_col);
-            return new Token(TokenType.ERROR, err_text, "Invalid STRING literal.", _line, line_col);
         }
 
         private Token GetNumberLiteralToken()
@@ -248,31 +240,30 @@ namespace InterpreterApp.Analysis.Syntax
             int line_col = _column;
 
             while (char.IsDigit(Current) || Current == '.')
-            {
                 Next();
-                if (Current == '.')
-                    if (is_float)
-                        return new Token(TokenType.ERROR, _code.Substring(start, (_position - start)), "Invalid FLOAT literal.", _line, line_col);
-                    else
-                        is_float = true;
-            }
             
             int length = _position - start;
             string text = _code.Substring(start, length);
 
-            if (is_float)
+            //^\d+(\.\d+)?$|^(\d+)?\.\d+?$
+            string float_pattern = @"^\d*\.\d+$";
+            string int_pattern = @"^\d+$";
+            Regex float_regex = new Regex(float_pattern);
+            Regex int_regex = new Regex(int_pattern);
+
+            object val = null;
+
+            if (int_regex.IsMatch(text))
             {
-                if (!float.TryParse(text, out var float_value))
-                    return new Token(TokenType.ERROR, text, "Invalid FLOAT literal.", _line, line_col);
-                return new Token(TokenType.FLOATLITERAL, text, float_value, _line, line_col);
+                val = int.Parse(text);
+                return new Token(TokenType.INTLITERAL, text, val, _line, line_col);
             }
-            else
+            else if (float_regex.IsMatch(text))
             {
-                if (!int.TryParse(text, out var int_value))
-                    return new Token(TokenType.ERROR, text, "Invalid INT literal.", _line, line_col);
-                return new Token(TokenType.INTLITERAL, text, int_value, _line, line_col);
+                val = float.Parse(text);
+                return new Token(TokenType.FLOATLITERAL, text, val, _line, line_col);
             }
-            
+            return new Token(TokenType.ERROR, text, "Invalid Number.", _line, line_col);
         }
 
         private Token GetEscapeCodeToken()
@@ -280,33 +271,22 @@ namespace InterpreterApp.Analysis.Syntax
             int start = _position;
             int line_col = _column;
             
-            while (Current != ']')
+            while (!char.IsWhiteSpace(Current))
                 Next();
 
-            if (Current == ']')
+            int length = _position - start;
+            string text = _code.Substring(start, length);
+            object val = null;
+
+            string escape_sequence_pattern = @"^\[[\]\[\&\$\#]\]$";
+            Regex escape_regex = new Regex(escape_sequence_pattern);
+
+            if (escape_regex.IsMatch(text))
             {
-                Next();
-
-                int length = _position - start;
-                string text = _code.Substring(start, length);
-                object value = null;
-
-                if (Current == ']')
-                {
-                    Next();
-                    length = _position - start;
-                    text = _code.Substring(start, length);
-                    value = null;
-                }
-
-                if (text == "[[]" || text == "[]]" || text == "[&]" || text == "[$]" || text == "[#]")
-                {
-                    value = text.ToCharArray()[1];
-                    return new Token(TokenType.ESCAPE, text, value, _line, line_col);
-                }
-                return new Token(TokenType.ERROR, text, $"Invalid '{text}' as escape sequence.", _line, line_col);
+                val = text.ToCharArray()[1];
+                return new Token(TokenType.ESCAPE, text, val, _line, line_col);
             }
-            return new Token(TokenType.ERROR, _code.Substring(start, (_position - start)), "Missing ]", _line, line_col);
+            return new Token(TokenType.ERROR, text, $"Invalid '{text}' as escape sequence.", _line, line_col);
         }
     }
 }
