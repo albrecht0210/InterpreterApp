@@ -65,6 +65,29 @@ namespace InterpreterApp.Analysis.Syntax
             }
         }
 
+        public static DataType GetDataType(Token token)
+        {
+            TokenType token_type = token.Token_Type;
+
+            switch (token_type)
+            {
+                case TokenType.INT:
+                case TokenType.INTLITERAL:
+                    return DataType.Int;
+                case TokenType.FLOAT:
+                case TokenType.FLOATLITERAL:
+                    return DataType.Float;
+                case TokenType.CHAR:
+                case TokenType.CHARLITERAL:
+                    return DataType.Char;
+                case TokenType.BOOL:
+                case TokenType.BOOLLITERAL:
+                    return DataType.Bool;
+                default:
+                    throw new Exception($"Unknown data type");
+            }
+        }
+
         public static DataType GetDataType(TokenType token_type)
         {
             switch (token_type)
@@ -100,7 +123,17 @@ namespace InterpreterApp.Analysis.Syntax
                 return DataType.String;
         }
         
-        public static bool IsLogicalOperator(TokenType token_type)
+        public static bool IsArithmeticOperator(TokenType token_type)
+        {
+            List<TokenType> arithmetic_operator = new List<TokenType>
+            {
+                TokenType.PLUS, TokenType.MINUS, TokenType.STAR, TokenType.SLASH, TokenType.PERCENT
+            };
+
+            return arithmetic_operator.Contains(token_type);
+        }
+
+        public static bool IsComparisonOperator(TokenType token_type)
         {
             List<TokenType> logical_operator = new List<TokenType>
             {
@@ -116,9 +149,9 @@ namespace InterpreterApp.Analysis.Syntax
         {
             //string float_pattern = @"^-?\d+(\.\d+)?$";
             string float_pattern = @"^(?:\+|\-)?\d*\.\d+$";
-            string int_pattern = @"^(?:\+|\-)?\d+$";
-            string char_pattern = @"^'.'$";
-            string bool_pattern = @"^""TRUE""|""FALSE""$";
+            string int_pattern = @"^(?:\+|\-)?\d+$"; 
+            string char_pattern = @"^'(?:\[[\[\]\&\$\#']\])'|'[^\[\]\&\$\#']'$";
+            string bool_pattern = @"^\""TRUE\""$|^\""FALSE\""$";
 
             Regex float_regex = new Regex(float_pattern);
             Regex int_regex = new Regex(int_pattern);
@@ -137,5 +170,11 @@ namespace InterpreterApp.Analysis.Syntax
                 throw new Exception($"Runtime Error: Invalid input {val}.");
         }
 
+        public static bool MatchDataType(DataType ldt, DataType rdt)
+        {
+            if ((ldt == DataType.Float && rdt == DataType.Int))
+                return true;
+            return ldt == rdt;
+        }
     }
 }
