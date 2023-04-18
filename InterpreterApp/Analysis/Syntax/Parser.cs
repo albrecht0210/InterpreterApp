@@ -2,6 +2,7 @@
 using InterpreterApp.Analysis.Tree.Statement;
 using InterpreterApp.Analysis.Tree.Expression;
 using InterpreterApp.Analysis.Type;
+using System.Diagnostics;
 
 namespace InterpreterApp.Analysis.Syntax
 {
@@ -246,14 +247,15 @@ namespace InterpreterApp.Analysis.Syntax
                 // If the token is not newline then throw an error
                 if (!MatchToken(TokenType.NEWLINE))
                     throw new Exception($"({_current_token.Line},{_current_token.Column}): Unexpected {_current_token.Token_Type} token expected {TokenType.NEWLINE} token");
-                
+
                 // Create the Display Statement
                 return new DisplayNode(display_token, expressions);
             }
             // If display starts with expression
             // ex. DISPLAY: 6 ....
             else if (MatchToken(TokenType.ESCAPE) || MatchToken(TokenType.IDENTIFIER) || MatchToken(TokenType.INTLITERAL) || MatchToken(TokenType.FLOATLITERAL)
-                || MatchToken(TokenType.CHARLITERAL) || MatchToken(TokenType.BOOLLITERAL) || MatchToken(TokenType.STRINGLITERAL))
+                || MatchToken(TokenType.CHARLITERAL) || MatchToken(TokenType.BOOLLITERAL) || MatchToken(TokenType.STRINGLITERAL)
+                || MatchToken(TokenType.MINUS) || MatchToken(TokenType.PLUS) || MatchToken(TokenType.NOT))
             {
                 expressions.Add(ParseExpression());
 
@@ -392,6 +394,7 @@ namespace InterpreterApp.Analysis.Syntax
         private ExpressionNode ParseExpression()
         {
             ExpressionNode expression;
+            Debug.WriteLine(_current_token);
             if (MatchToken(TokenType.ESCAPE))
             {
                 Token escape_token = _current_token;
@@ -469,11 +472,19 @@ namespace InterpreterApp.Analysis.Syntax
             // Read and remove the current token
             Token unary_token = _current_token;
             ConsumeToken(unary_token.Token_Type);
+            ExpressionNode expression = null;
+            if (MatchToken(TokenType.OPENPARENTHESIS))
+                expression = ParseExpression();
+            else
+                expression = ParseTerm();
 
-            ExpressionNode expression = ParseExpression();
+            UnaryNode unary_expr = new UnaryNode(unary_token, expression);
+
+            if (Grammar.GetBinaryPrecedence(_current_token.Token_Type) > 0)
+                return ParseBinaryExpression(unary_expr);
 
             // Create the unary expression
-            return new UnaryNode(unary_token, expression);
+            return unary_expr;
         }
 
         private ExpressionNode ParseBinaryExpression(ExpressionNode prev_left = null)
@@ -533,12 +544,9 @@ namespace InterpreterApp.Analysis.Syntax
                 ConsumeToken(literal_token.Token_Type);
                 return new LiteralNode(literal_token, literal_token.Value);
             }
-            else if (MatchToken(TokenType.OPENPARENTHESIS))
-                return ParseParenthesisExpression();
-            else if (MatchToken(TokenType.MINUS) || MatchToken(TokenType.PLUS) || MatchToken(TokenType.NOT))
-                return ParseUnaryExpression();
             else
-                throw new Exception($"({_current_token.Line}, {_current_token.Column}): Unexpected {_current_token} token expected expression token");
+                return ParseExpression();
+                //throw new Exception($"({_current_token.Line}, {_current_token.Column}): Unexpected {_current_token} token expected expression token");
         }
 
         // End Parse Expressions
