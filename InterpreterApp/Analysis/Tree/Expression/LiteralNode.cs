@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using InterpreterApp.Analysis.Syntax;
-using InterpreterApp.Analysis.Type;
+﻿using InterpreterApp.Analysis.Syntax;
 
 namespace InterpreterApp.Analysis.Tree.Expression
 {
