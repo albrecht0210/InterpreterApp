@@ -70,7 +70,7 @@ namespace InterpreterApp.Analysis.Syntax
                         DataType data_expression_type = AnalyzeExpression(variable.Value);
 
                         // If the data type of the statement and expression is not same
-                        if (data_type != data_expression_type)
+                        if (!Grammar.MatchDataType(data_type, data_expression_type))
                             throw new Exception($"({statement.Data_Type_Token.Line},{statement.Data_Type_Token.Column}): Unable to assign {data_expression_type} on \"{variable.Key}\".");
                     }
                     // Add the identifier and data type to the table of variables
@@ -98,7 +98,7 @@ namespace InterpreterApp.Analysis.Syntax
                     DataType data_expression_type = AnalyzeExpression(statement.Expression);
 
                     // If the data type of the statement and expression is not same
-                    if (data_type != data_expression_type)
+                    if (!Grammar.MatchDataType(data_type, data_expression_type))
                         throw new Exception($"({statement.Equals_Token[index].Line},{statement.Equals_Token[index].Column}): Unable to assign {data_expression_type} on \"{identifier}\".");
                 }
                 // If the identifier is not declared
@@ -204,16 +204,24 @@ namespace InterpreterApp.Analysis.Syntax
             DataType right_dt = AnalyzeExpression(expression.Right);
 
             // If data type of left and right is not same
-            if (left_dt != right_dt)
+            if (!MatchExpressionDataType(left_dt, right_dt))
                 throw new Exception($"({operator_token.Line},{operator_token.Column}): Operator '{operator_token.Code}' cannot be applied to operands of type {left_dt} and {right_dt}");
 
+            // If the operator token is a arithmetic operator but left_dt or right_dt is not int or float 
+            if (Grammar.IsArithmeticOperator(operator_token.Token_Type)
+                && ((left_dt == DataType.Char || left_dt == DataType.String || left_dt == DataType.Bool)
+                && (right_dt == DataType.Char || right_dt == DataType.String || right_dt == DataType.Bool)))
+                throw new Exception($"({operator_token.Line},{operator_token.Column}): Operator '{operator_token.Code}' cannot be applied to operands of type {left_dt} and {right_dt}");
+            // If the operator token is a comparison operator but left_dt or right_dt is not the same
+            else if (Grammar.IsComparisonOperator(operator_token.Token_Type)
+                && !MatchExpressionDataType(left_dt, right_dt))
+                throw new Exception($"({operator_token.Line},{operator_token.Column}): Operator '{operator_token.Code}' cannot be applied to operands of type {left_dt} and {right_dt}");
+            
             // If the operator token is a logical operator
-            if (Grammar.IsLogicalOperator(operator_token.Token_Type))
+            if (Grammar.IsComparisonOperator(operator_token.Token_Type))
                 return DataType.Bool;
-
-            // return the data type of the left expression
-            // because left and right expression have same data type
-            return left_dt;
+            else
+                return left_dt;
         }
         
         private DataType AnalyzeUnaryExpression(UnaryNode expression)
@@ -263,6 +271,13 @@ namespace InterpreterApp.Analysis.Syntax
                 return DataType.String;
             else
                 throw new Exception($"({expression.Literal_Token.Line},{expression.Literal_Token.Column}): Unknown data type {expression.Literal}");
+        }
+
+        private bool MatchExpressionDataType(DataType ldt, DataType rdt)
+        {
+            if ((ldt == DataType.Int && rdt == DataType.Float) || (ldt == DataType.Float && rdt == DataType.Int))
+                return true;
+            return ldt == rdt;
         }
     }
 }
