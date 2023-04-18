@@ -166,7 +166,7 @@ namespace InterpreterApp.Analysis
                 value = Grammar.ConvertValue(val);
 
                 // If the data type of the identifier and expression is not same
-                if (variable_table.GetType(identifiers[index]) != Grammar.GetDataType(value))
+                if (!Grammar.MatchDataType(variable_table.GetType(identifiers[index]), Grammar.GetDataType(value)))
                     throw new Exception($"Runtime Error: Unable to assign {Grammar.GetDataType(value)} on \"{identifiers[index]}\".");
 
                 // Add variable to table of variables
@@ -307,7 +307,7 @@ namespace InterpreterApp.Analysis
             if (expression.Token_Operator.Token_Type == TokenType.MINUS)
                 return -unary_value;
             else if (expression.Token_Operator.Token_Type == TokenType.NOT)
-                return !unary_value;
+                return !(unary_value.Contains("TRUE") ? true : false);
             else
                 return unary_value;
         }
