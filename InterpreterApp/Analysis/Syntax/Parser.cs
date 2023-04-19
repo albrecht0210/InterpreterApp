@@ -11,12 +11,14 @@ namespace InterpreterApp.Analysis.Syntax
         private readonly Lexer _lexer;
         private Token _current_token;
         private List<string> _variable_names;
+        private bool _can_declare;
 
         public Parser(Lexer lexer)
         {
             this._lexer = lexer;
             this._current_token = lexer.GetToken();
             this._variable_names = new List<string>();
+            this._can_declare = true;
         }
 
         // Parse the whole code
@@ -109,22 +111,37 @@ namespace InterpreterApp.Analysis.Syntax
             {
                 if (MatchToken(TokenType.INT) || MatchToken(TokenType.FLOAT) ||
                     MatchToken(TokenType.CHAR) || MatchToken(TokenType.BOOL))
-                    statement_list.Add(ParseVariableDeclarationStatement());
-
+                {
+                    if (_can_declare)
+                        statement_list.Add(ParseVariableDeclarationStatement());
+                    else
+                        throw new Exception($"({_current_token.Line},{_current_token.Column}): Invalid syntax.");
+                }
                 else if (MatchToken(TokenType.IDENTIFIER))
+                {
+                    _can_declare = false;
                     statement_list.Add(ParseAssignmentStatement());
-
+                }
                 else if (MatchToken(TokenType.DISPLAY))
+                {
+                    _can_declare = false;
                     statement_list.Add(ParseDisplayStatement());
-
+                }
                 else if (MatchToken(TokenType.SCAN))
+                {
+                    _can_declare = false;
                     statement_list.Add(ParseScanStatement());
-
+                }
                 else if (MatchToken(TokenType.IF))
+                {
+                    _can_declare = false;
                     statement_list.Add(ParseIfStatement());
-
+                }
                 else if (MatchToken(TokenType.WHILE))
+                {
+                    _can_declare = false;
                     statement_list.Add(ParseWhileStatement());
+                }
 
                 else if (MatchToken(TokenType.ENDOFFILE))
                     throw new Exception($"({_current_token.Line},{_current_token.Column}): Missing End Statement.");
